@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sentinelx-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sentinelx
+      POSTGRES_PASSWORD: sentinelx
+      POSTGRES_DB: sentinelx
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelx"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: sentinelx-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENV: development
+      DATABASE_URL: postgresql://sentinelx:sentinelx@db:5432/sentinelx
+      API_KEY: ${API_KEY:-dev-local-key}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in your .env file}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
+      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
+      LANGCHAIN_PROJECT: sentinelx
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      RISK_APPROVAL_THRESHOLD: ${RISK_APPROVAL_THRESHOLD:-60}
+      CORS_ORIGINS: "*"
+    ports:
+      - "8000:8000"
+
+  ui:
+    build: ./ui
+    container_name: sentinelx-ui
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8000
+      SENTINELX_API_KEY: ${API_KEY:-dev-local-key}
+    ports:
+      - "8501:8501"
+
+volumes:
+  postgres_data:
