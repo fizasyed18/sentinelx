@@ -1,3 +1,5 @@
+Live URL - http://localhost:8501
+
 # 🛡️ SentinelX — Autonomous AI Security & Governance Platform
 
 SentinelX is a multi-agent platform that monitors AI-agent activity across
